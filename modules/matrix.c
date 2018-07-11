@@ -64,6 +64,7 @@ mtx load(char *filename, int nrows, int ncols){
    fscanf(file, "%Lf", &matrix[i][j]);
   }
  }
+ fclose(file);
  ans.data=matrix;
  return ans;
 }
@@ -78,6 +79,7 @@ void savematrix(char *filename, mtx matrix){
   }
   fprintf(file, "\n");
  }
+ fclose(file);
 }
 
 //matrix sum, it will not verify the dimensions of matrix
@@ -131,7 +133,7 @@ mtx mtxprod(mtx matrix1, mtx matrix2){
  prod.data=answ;
  return prod;
 }
- //return the transpose of a matrix
+//return the transpose of a matrix
 mtx transpose(mtx matrix){
  mtx answ;
  answ.ncols=matrix.nrows;
@@ -147,8 +149,6 @@ mtx transpose(mtx matrix){
  answ.data=trans;
  return answ;
 }
-
- 
 //copy a matrix to another address
 mtx matrixcopy(mtx A){
  mtx ans;
@@ -168,7 +168,6 @@ mtx matrixcopy(mtx A){
  return ans;
 }
 
-
 mtx cutmatrix(mtx matrix, int srowcut, int nrows, int scolumncut, int ncols){
  mtx result=nullmatrix(nrows, ncols);
  int j, line, column;
@@ -177,6 +176,17 @@ mtx cutmatrix(mtx matrix, int srowcut, int nrows, int scolumncut, int ncols){
    line=srowcut+i;
    column=scolumncut+j;
    result.data[i][j]=matrix.data[line][column];
+  }
+ }
+ return result;
+}
+
+long double vectprod(mtx vec1, mtx vec2){
+ long double result=0.0;
+ int j;
+ for(int i=0; i<vec1.nrows; i++){
+  for(j=0; j<vec1.ncols; j++){
+   result=result+vec1.data[i][j]*vec2.data[i][j];
   }
  }
  return result;
