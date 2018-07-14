@@ -8,16 +8,23 @@ typedef struct
  long double **data;
 }mtx;
 
-
-mtx nullmatrix(int nrows, int ncols){
+mtx crystalmatrix(int nrows, int ncols, long double value){
  mtx matrix;
+ int j;
  matrix.nrows=nrows;
  matrix.ncols=ncols;
  matrix.data=(long double **)malloc(nrows*sizeof(long double *));
  for(int i=0; i<nrows; i++){
-  matrix.data[i]=(long double *)calloc(ncols, sizeof(long double));
+  matrix.data[i]=(long double *)malloc(ncols*sizeof(long double));
+  for(j=0; j<ncols; j++){
+   matrix.data[i][j]=value;
+  }
  }
- return matrix;
+ return matrix; 
+}
+
+mtx nullmatrix(int nrows, int ncols){
+ return crystalmatrix(nrows, ncols, 0.0);
 }
 
 mtx randmatrix(int nrows, int ncols){
@@ -48,9 +55,9 @@ void draw(mtx matrix){
   printf("\n");
  }
 }
-//load a matrix stored in a text file
+//mtxload a matrix stored in a text file
 //split columns with tab or space and rows with breaklines \n
-mtx load(char *filename, int nrows, int ncols){
+mtx mtxload(char *filename, int nrows, int ncols){
  mtx ans;
  ans.nrows=nrows;
  ans.ncols=ncols;
@@ -68,7 +75,7 @@ mtx load(char *filename, int nrows, int ncols){
  ans.data=matrix;
  return ans;
 }
-void savematrix(char *filename, mtx matrix){
+void mtxsave(char *filename, mtx matrix){
  int j;
  FILE *file;
  file=fopen(filename, "w");
@@ -97,6 +104,33 @@ mtx mtxsum(mtx matrix1, mtx matrix2){
  }
  sum.data=answ;
  return sum;
+}
+
+mtx mtxsub(mtx matrix1, mtx matrix2){
+ mtx sum;
+ sum.nrows=matrix1.nrows;
+ sum.ncols=matrix1.ncols;
+ long double **answ=(long double **)malloc(matrix1.nrows*sizeof(long double *));
+ int j;
+ for(int i=0; i<matrix1.nrows; i++){
+  answ[i]=(long double *)malloc(matrix1.ncols*sizeof(long double));
+  for(j=0;j<matrix1.ncols;j++){
+   answ[i][j]=matrix1.data[i][j]-matrix2.data[i][j];
+  }
+ }
+ sum.data=answ;
+ return sum;
+}
+
+mtx mtxtermsmult(mtx matrix1, mtx matrix2){
+ int j;
+ mtx result=nullmatrix(matrix1.nrows, matrix1.ncols);
+ for(int i=0; i<matrix1.nrows; i++){
+  for(j=0; j<matrix1.ncols; j++){
+   result.data[i][j]=matrix1.data[i][j]*matrix2.data[i][j];
+  }
+ }
+ return result;
 }
 //matrix multiplication by a real
 mtx mtxmult(mtx matrix, long double q){
@@ -150,7 +184,7 @@ mtx transpose(mtx matrix){
  return answ;
 }
 //copy a matrix to another address
-mtx matrixcopy(mtx A){
+mtx mtxclone(mtx A){
  mtx ans;
  int j,nrows, ncols;
  ans.nrows=A.nrows;
@@ -168,7 +202,7 @@ mtx matrixcopy(mtx A){
  return ans;
 }
 
-mtx cutmatrix(mtx matrix, int srowcut, int nrows, int scolumncut, int ncols){
+mtx mtxcut(mtx matrix, int srowcut, int nrows, int scolumncut, int ncols){
  mtx result=nullmatrix(nrows, ncols);
  int j, line, column;
  for(int i=0; i<nrows; i++){
@@ -190,4 +224,77 @@ long double vectprod(mtx vec1, mtx vec2){
   }
  }
  return result;
+}
+
+void mtxcopy(mtx *matrix1, mtx matrix2){
+ int j, difsize=0;
+ if(matrix1->nrows != matrix2.nrows){
+  matrix1->data=(long double **)realloc(matrix1->data, matrix2.nrows*sizeof(long double *));
+  matrix1->nrows=matrix2.nrows;
+ }
+ if(matrix1->ncols != matrix2.ncols){
+  difsize=1;
+  matrix1->ncols=matrix2.ncols;
+ }
+ for(int i=0; i<matrix2.nrows; i++){
+  if(difsize){
+   matrix1->data[i]=(long double *)realloc(matrix1->data[i], matrix2.ncols*sizeof(long double));
+  }
+  for(j=0; j<matrix2.ncols; j++){
+   matrix1->data[i][j]=matrix2.data[i][j];
+  }
+ }
+}
+
+void mtxfree(mtx *matrix){
+ for(int i=0; i<matrix->nrows; i++){
+  free(matrix->data[i]);
+ }
+ free(matrix->data);
+}
+
+void putline(mtx *matrix, mtx line, int posi){
+ int ncols=matrix->ncols;
+ for(int i=0; i<ncols; i++){
+  matrix->data[posi][i]=line.data[0][i];
+ }
+}
+void addline(mtx *matrix, mtx line, int posi){
+ mtx bak;
+ bak=mtxclone(*matrix);
+ int j=0;
+ mtxfree(matrix);
+ *matrix=nullmatrix(bak.nrows+1, bak.ncols);
+ for(int i=0; i<bak.nrows+1; i++){
+  if(i==posi){
+   putline(matrix, line, i);
+  }
+  else{
+   putline(matrix, mtxcut(bak, j, 1, 0, bak.ncols), i);
+   j++;
+  }
+ }
+}
+
+void putcol(mtx *matrix, mtx col, int posi){
+ int nrows=matrix->nrows;
+ for(int i=0; i<nrows; i++){
+  matrix->data[i][posi]=col.data[i][0];
+ }
+}
+void addcol(mtx *matrix, mtx col, int posi){
+ mtx bak;
+ bak=mtxclone(*matrix);
+ int j=0;
+ mtxfree(matrix);
+ *matrix=nullmatrix(bak.nrows, bak.ncols+1);
+ for(int i=0; i<bak.ncols+1; i++){
+  if(i==posi){
+   putcol(matrix, col, i);
+  }
+  else{
+   putcol(matrix, mtxcut(bak, 0, bak.nrows, j, 1), i);
+   j++;
+  }
+ }
 }
