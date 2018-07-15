@@ -60,7 +60,7 @@ mtx LU(mtx A, mtx B){
   L[i]=(long double *)malloc(n*sizeof(long double *));
   U[i]=(long double *)malloc(n*sizeof(long double *));
  }
- U=matrixcopy(A).data;
+ U=mtxclone(A).data;
  for(i=0; i<n; i++){
   pivo=i;
   max=fabsl(U[i][i]);

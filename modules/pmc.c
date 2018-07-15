@@ -5,6 +5,8 @@
 #include <sys/stat.h>
 #include "matrix.h"
 
+#define SIGM 0
+#define TGHYP 1
 
 long double sigm(long double u){
  return 1.0/(1.0+expl(-u));
@@ -13,12 +15,12 @@ long double sigm2(long double u){
  return (1.0-powl(sigm(u),2));
 }
 
-long double func(long double u){
- return sigm(u);
+long double func(long double u, int ftype){
+ if(ftype==SIGM)return sigm(u);
 }
 
-long double func2(long double u){
- return sigm2(u);
+long double func2(long double u, int ftype){
+ if(ftype==SIGM)return sigm2(u);
 }
 
 mtx **createneurons(int *qtneurons, int qtlayers, int qtinput){
@@ -41,8 +43,8 @@ long double neuronthink(mtx x, mtx w){
  input=vectprod(x,w);
  return input;
 }
-long double neuronansw(long double input){
- return func(input);
+long double neuronansw(long double input, int ftype){
+ return func(input, ftype);
 }
 
 mtx layerthink(mtx x, mtx *w, int qtneurons){
@@ -54,32 +56,32 @@ mtx layerthink(mtx x, mtx *w, int qtneurons){
  return input;
 }
 
-mtx layeransw(mtx input){
+mtx layeransw(mtx input, int ftype){
  mtx y;
  y=nullmatrix(1, input.ncols);
  for(int i=0; i<input.ncols; i++){
-  y.data[0][i]=neuronansw(input.data[0][i]);
+  y.data[0][i]=neuronansw(input.data[0][i], ftype);
  }
  return y;
 }
 
-mtx netthink(mtx x, mtx **w, int *qtneurons, int qtlayers){
+mtx netthink(mtx x, mtx **w, int *qtneurons, int qtlayers, int ftype){
  mtx y, input, x0;
  x0=crystalmatrix(1,1,-1.0);
  input=mtxclone(x);
  y=nullmatrix(1,1);
  for(int i=0; i<qtlayers; i++){
   mtxcopy(&input, layerthink(input, w[i], qtneurons[i]));
-  mtxcopy(&y, layeransw(input));
+  mtxcopy(&y, layeransw(input, ftype));
   mtxcopy(&input, y);
   addcol(&input, x0, 0);
  }
  return y;
 }
 
-mtx netansw(mtx x, mtx **w, int *qtneurons, int qtlayers){
+mtx netansw(mtx x, mtx **w, int *qtneurons, int qtlayers, int ftype){
  mtx answ, y;
- y=netthink(x, w, qtneurons, qtlayers);
+ y=netthink(x, w, qtneurons, qtlayers, ftype);
  answ=mtxclone(y);
  for(int i=0; i<answ.ncols; i++){
   if(answ.data[0][i]>0.5){
@@ -93,7 +95,7 @@ mtx netansw(mtx x, mtx **w, int *qtneurons, int qtlayers){
 }
 
 
-void fitbydelta(mtx **w, mtx *input, mtx x, mtx *y, mtx d, int qtlayers, long double lrn){
+void fitbydelta(mtx **w, mtx *input, mtx x, mtx *y, mtx d, int qtlayers, long double lrn, int ftype){
  mtx *delta, change;
  int qtneurons, qtnfrwrd, i, j, layer;
  long double der, del;
@@ -104,7 +106,7 @@ void fitbydelta(mtx **w, mtx *input, mtx x, mtx *y, mtx d, int qtlayers, long do
  change=nullmatrix(1,1);
  delta[layer]=nullmatrix(1,qtneurons);
  for(i=0; i<qtneurons; i++){
-  der=func2(input[layer].data[0][i]);
+  der=func2(input[layer].data[0][i], ftype);
   del=(d.data[0][i]-y[layer].data[0][i])*der;
   delta[layer].data[0][i]=del;
   mtxcopy(&change,mtxmult(y[layer-1], del*lrn));
@@ -116,7 +118,7 @@ void fitbydelta(mtx **w, mtx *input, mtx x, mtx *y, mtx d, int qtlayers, long do
   qtneurons=input[layer].ncols;
   delta[layer]=nullmatrix(1,qtneurons);
   for(i=0; i<qtneurons; i++){
-   der=func2(input[layer].data[0][i]);
+   der=func2(input[layer].data[0][i], ftype);
    del=0.0;
    for(j=0; j<qtnfrwrd; j++){
     del=del+delta[layer+1].data[0][j]*w[layer+1][j].data[0][i];
@@ -132,7 +134,7 @@ void fitbydelta(mtx **w, mtx *input, mtx x, mtx *y, mtx d, int qtlayers, long do
  qtneurons=input[0].ncols;
  delta[0]=nullmatrix(1,qtneurons);
  for(i=0; i<qtneurons; i++){
-  der=func2(input[0].data[0][i]);
+  der=func2(input[0].data[0][i], ftype);
   del=0.0;
   for(j=0; j<qtnfrwrd; j++){
    del=del+delta[1].data[0][j]*w[1][j].data[0][i];
@@ -145,17 +147,16 @@ void fitbydelta(mtx **w, mtx *input, mtx x, mtx *y, mtx d, int qtlayers, long do
 //end
 }
 
-mtx adjust(mtx x, mtx d, mtx **w, int *qtneurons, int qtlayers, long double lrn){
+mtx adjust(mtx x, mtx d, mtx **w, int *qtneurons, int qtlayers, long double lrn, int ftype){
  mtx *y, *input, yy, ii, x0;
  x0=crystalmatrix(1,1,-1.0);
  ii=mtxclone(x);
  yy=nullmatrix(1,1);
  y=(mtx *)malloc(qtlayers*sizeof(mtx));
  input=(mtx *)malloc(qtlayers*sizeof(mtx));
-
  for(int i=0; i<qtlayers; i++){
   mtxcopy(&ii, layerthink(ii, w[i], qtneurons[i]));
-  mtxcopy(&yy, layeransw(ii));
+  mtxcopy(&yy, layeransw(ii, ftype));
   input[i]=mtxclone(ii);
   if(i!=qtlayers-1){
    addcol(&yy, x0, 0);
@@ -163,10 +164,10 @@ mtx adjust(mtx x, mtx d, mtx **w, int *qtneurons, int qtlayers, long double lrn)
   y[i]=mtxclone(yy);
   mtxcopy(&ii, yy);
  }
- fitbydelta(w, input, x, y, d, qtlayers, lrn);
+ fitbydelta(w, input, x, y, d, qtlayers, lrn, ftype);
 }
 
-long double meansqrerr(mtx samples, mtx d, mtx **w, int *qtneurons, int qtlayers){
+long double meansqrerr(mtx samples, mtx d, mtx **w, int *qtneurons, int qtlayers, int ftype){
  long double result=0.0;
  int qtspl=samples.nrows;
  int qtinput=samples.ncols;
@@ -176,7 +177,7 @@ long double meansqrerr(mtx samples, mtx d, mtx **w, int *qtneurons, int qtlayers
  output=nullmatrix(1, d.ncols);
  for(int i=0; i<qtspl; i++){
   mtxcopy(&x,mtxcut(samples, i, 1, 0, qtinput));
-  mtxcopy(&output, netthink(x, w, qtneurons, qtlayers));
+  mtxcopy(&output, netthink(x, w, qtneurons, qtlayers, ftype));
   putline(&u, output, i);
  }
  mtxcopy(&u, mtxmult(u, -1.0));
@@ -236,4 +237,3 @@ mtx** loadnet(char *dirname, char *fileprefix, int *qtneurons, int qtlayers, int
  }
  return w;
 }
-

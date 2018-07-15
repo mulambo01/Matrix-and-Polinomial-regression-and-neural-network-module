@@ -9,9 +9,6 @@ long double meansqrerr(mtx w, mtx d, mtx samples){
  int qtw=w.ncols;
  mtx u;
  u=mtxprod(samples, transpose(w));
- printf("\n");
- draw(u);
- printf("\n");
  for(int i=0; i<qtspl; i++){
   result=result+powl((d.data[i][0]-u.data[i][0]),2);
  }
@@ -26,19 +23,19 @@ void main(){
  qtw=5;
  qtspl=35;
  N=0.0025;
- precis=10.e-50;
- samples=load("apendice2.txt", qtspl, qtw+1);
- d=cutmatrix(samples,0,qtspl,qtw,1);
- samples=cutmatrix(samples,0,qtspl,0,qtw);
+ precis=powl(2.0,-65);
+ samples=mtxload("apendice2.txt", qtspl, qtw+1);
+ d=mtxcut(samples,0,qtspl,qtw,1);
+ samples=mtxcut(samples,0,qtspl,0,qtw);
  w=randmatrix(1,qtw);
-// w=load("w2.dat",1,qtw);
+// w=mtxload("w2.dat",1,qtw);
  steps=0;
  lastE=0.0;
  E=meansqrerr(w,d,samples);
  while(fabsl(E-lastE)>precis){
   lastE=E;
   for(i=0; i<qtspl; i++){
-   x=cutmatrix(samples, i, 1, 0, qtw);
+   x=mtxcut(samples, i, 1, 0, qtw);
    u=vectprod(x, w);
    x=mtxmult(x, N*(d.data[i][0]-u));
    w=mtxsum(w,x);
@@ -46,6 +43,9 @@ void main(){
   E=meansqrerr(w,d,samples);
   steps=steps+1;
  }
- savematrix("pesos.txt", w);
- printf("%d\n", steps);
+ mtxsave("pesos.txt", w);
+ printf("number of steps: %d\n", steps);
+ printf("meansqrerr: %.10Le\n", E);
+ printf("last meansqrerr: %.10Le\n", lastE);
+ printf("delta: %.10Le\n", E-lastE);
 }
