@@ -5,24 +5,33 @@
 #include <sys/stat.h>
 #include "matrix.h"
 
+//types of functions
+//sigmoid function
 #define SIGM 0
+//hyberbolic tangent
 #define TGHYP 1
 
+//return the sigmoid function
 long double sigm(long double u){
  return 1.0/(1.0+expl(-u));
 }
-long double sigm2(long double u){
+//return the derivative of sigmoid function
+long double sigm1(long double u){
  return (1.0-powl(sigm(u),2));
 }
-
+//return the value of function of type "ftype"
 long double func(long double u, int ftype){
  if(ftype==SIGM)return sigm(u);
 }
-
-long double func2(long double u, int ftype){
- if(ftype==SIGM)return sigm2(u);
+//return the value of derivative function of type "ftype"
+long double func1(long double u, int ftype){
+ if(ftype==SIGM)return sigm1(u);
 }
 
+//create a neural network
+//qtneurons is an array with the quantity of neurons by layer
+//qtlayer defines the quantity of layers
+//qtinput define the quantity of data input without the threshold
 mtx **createneurons(int *qtneurons, int qtlayers, int qtinput){
  int j, qtw;
  mtx **net=(mtx **)malloc(qtlayers*sizeof(mtx *));
@@ -37,16 +46,18 @@ mtx **createneurons(int *qtneurons, int qtlayers, int qtinput){
  return net;
 }
 
-
+//return the linear combination with values of the synaptic weights and inputs
 long double neuronthink(mtx x, mtx w){
  long double input, y;
  input=vectprod(x,w);
  return input;
 }
+//return the output of a neuron
+//input is the answer of function neuronthink
 long double neuronansw(long double input, int ftype){
  return func(input, ftype);
 }
-
+//return the linear combinations of each neuron with the sample x
 mtx layerthink(mtx x, mtx *w, int qtneurons){
  mtx input;
  input=nullmatrix(1, qtneurons);
@@ -55,7 +66,8 @@ mtx layerthink(mtx x, mtx *w, int qtneurons){
  }
  return input;
 }
-
+//return the output of a neural layer
+//input is the answer of function layerthink
 mtx layeransw(mtx input, int ftype){
  mtx y;
  y=nullmatrix(1, input.ncols);
@@ -65,6 +77,11 @@ mtx layeransw(mtx input, int ftype){
  return y;
 }
 
+//return the answer of a neural network
+//array w stores the synaptic weights matrix indexing by the layer and position of neuron
+//array qtneurons stores the quantity of neurons in each layer
+//qtlayers is the quantity of layers
+//ftype is the type of activation function
 mtx netthink(mtx x, mtx **w, int *qtneurons, int qtlayers, int ftype){
  mtx y, input, x0;
  x0=crystalmatrix(1,1,-1.0);
@@ -79,6 +96,7 @@ mtx netthink(mtx x, mtx **w, int *qtneurons, int qtlayers, int ftype){
  return y;
 }
 
+//just call the function netthink and process the output returning the sample class
 mtx netansw(mtx x, mtx **w, int *qtneurons, int qtlayers, int ftype){
  mtx answ, y;
  y=netthink(x, w, qtneurons, qtlayers, ftype);
@@ -94,7 +112,7 @@ mtx netansw(mtx x, mtx **w, int *qtneurons, int qtlayers, int ftype){
  return answ;
 }
 
-
+//it will adjust each weight of a network using the inputs and outputs
 void fitbydelta(mtx **w, mtx *input, mtx x, mtx *y, mtx d, int qtlayers, long double lrn, int ftype){
  mtx *delta, change;
  int qtneurons, qtnfrwrd, i, j, layer;
@@ -106,7 +124,7 @@ void fitbydelta(mtx **w, mtx *input, mtx x, mtx *y, mtx d, int qtlayers, long do
  change=nullmatrix(1,1);
  delta[layer]=nullmatrix(1,qtneurons);
  for(i=0; i<qtneurons; i++){
-  der=func2(input[layer].data[0][i], ftype);
+  der=func1(input[layer].data[0][i], ftype);
   del=(d.data[0][i]-y[layer].data[0][i])*der;
   delta[layer].data[0][i]=del;
   mtxcopy(&change,mtxmult(y[layer-1], del*lrn));
@@ -118,7 +136,7 @@ void fitbydelta(mtx **w, mtx *input, mtx x, mtx *y, mtx d, int qtlayers, long do
   qtneurons=input[layer].ncols;
   delta[layer]=nullmatrix(1,qtneurons);
   for(i=0; i<qtneurons; i++){
-   der=func2(input[layer].data[0][i], ftype);
+   der=func1(input[layer].data[0][i], ftype);
    del=0.0;
    for(j=0; j<qtnfrwrd; j++){
     del=del+delta[layer+1].data[0][j]*w[layer+1][j].data[0][i];
@@ -134,7 +152,7 @@ void fitbydelta(mtx **w, mtx *input, mtx x, mtx *y, mtx d, int qtlayers, long do
  qtneurons=input[0].ncols;
  delta[0]=nullmatrix(1,qtneurons);
  for(i=0; i<qtneurons; i++){
-  der=func2(input[0].data[0][i], ftype);
+  der=func1(input[0].data[0][i], ftype);
   del=0.0;
   for(j=0; j<qtnfrwrd; j++){
    del=del+delta[1].data[0][j]*w[1][j].data[0][i];
@@ -147,6 +165,7 @@ void fitbydelta(mtx **w, mtx *input, mtx x, mtx *y, mtx d, int qtlayers, long do
 //end
 }
 
+//it will genearate the arrays input and y and pass them to the function fitbydelta
 mtx adjust(mtx x, mtx d, mtx **w, int *qtneurons, int qtlayers, long double lrn, int ftype){
  mtx *y, *input, yy, ii, x0;
  x0=crystalmatrix(1,1,-1.0);
@@ -167,6 +186,7 @@ mtx adjust(mtx x, mtx d, mtx **w, int *qtneurons, int qtlayers, long double lrn,
  fitbydelta(w, input, x, y, d, qtlayers, lrn, ftype);
 }
 
+//calculate the mean square error of the samples
 long double meansqrerr(mtx samples, mtx d, mtx **w, int *qtneurons, int qtlayers, int ftype){
  long double result=0.0;
  int qtspl=samples.nrows;
@@ -187,6 +207,8 @@ long double meansqrerr(mtx samples, mtx d, mtx **w, int *qtneurons, int qtlayers
  return result;
 }
 
+//save a layer in a text file
+//receive the array of weights by neuron, put it in a matrix and save it
 void savelayer(char *filename, mtx *w, int qtneurons){
  mtx wbylayer;
  wbylayer=nullmatrix(qtneurons, w[0].ncols);
@@ -196,6 +218,9 @@ void savelayer(char *filename, mtx *w, int qtneurons){
  mtxsave(filename, wbylayer);
 }
 
+//save a network in a text file
+//dirname is the name of directory
+//fileprefix is the the prefix that each layer file will receive
 void savenet(char *dirname, char *fileprefix, mtx **w, int *qtneurons, int qtlayers){
  int namelen, sufixlen;
  sufixlen=1+(int)log10(qtlayers-1);
@@ -210,6 +235,7 @@ void savenet(char *dirname, char *fileprefix, mtx **w, int *qtneurons, int qtlay
  }
 }
 
+//load a neural layer by a text file
 mtx* loadlayer(char *filename, int qtneurons, int qtw){
  mtx layer, *w;
  w=(mtx *)malloc(qtneurons*sizeof(mtx));
@@ -220,6 +246,7 @@ mtx* loadlayer(char *filename, int qtneurons, int qtw){
  return w;
 }
 
+//load a neural network by the files of a directory with a prefix
 mtx** loadnet(char *dirname, char *fileprefix, int *qtneurons, int qtlayers, int qtinput){
  mtx **w;
  int namelen, sufixlen, qtw;

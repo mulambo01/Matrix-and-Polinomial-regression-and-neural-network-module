@@ -9,6 +9,7 @@ void main(){
  char filename[100];
  int i, j, qtspl, qtdatabyrow, *qtneurons, qtinput, qtlayers, steps, ftype;
  long double Eqm, lastEqm, precis, lrn;
+//start protocols
  ftype=0;
  precis=10.e-6;
  lrn=0.1;
@@ -24,6 +25,7 @@ void main(){
  ds=mtxcut(samples,0, qtspl, qtinput, qtdatabyrow-qtinput);
  samples=mtxcut(samples, 0, qtspl, 0, qtinput);
 
+//will repeat the adjust process until reachs the precision value
  d=nullmatrix(1,1);
  sample=nullmatrix(1,1);
  steps=0;

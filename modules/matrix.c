@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+//struct of an object called matrix
 typedef struct
 {
  int nrows;
@@ -8,6 +9,7 @@ typedef struct
  long double **data;
 }mtx;
 
+//return a matrix with equals elements of value
 mtx crystalmatrix(int nrows, int ncols, long double value){
  mtx matrix;
  int j;
@@ -22,11 +24,11 @@ mtx crystalmatrix(int nrows, int ncols, long double value){
  }
  return matrix; 
 }
-
+//return a null matrix
 mtx nullmatrix(int nrows, int ncols){
  return crystalmatrix(nrows, ncols, 0.0);
 }
-
+//return a matrix of elements with random values
 mtx randmatrix(int nrows, int ncols){
  int j;
  mtx ans;
@@ -45,7 +47,7 @@ mtx randmatrix(int nrows, int ncols){
  return ans;
 }
 
-//draw an nrows x ncols matrix on the console
+//draw a matrix on console
 void draw(mtx matrix){
  int j;
  for(int i=0; i<matrix.nrows ; i++){
@@ -55,7 +57,7 @@ void draw(mtx matrix){
   printf("\n");
  }
 }
-//mtxload a matrix stored in a text file
+//load a matrix stored in a text file
 //split columns with tab or space and rows with breaklines \n
 mtx mtxload(char *filename, int nrows, int ncols){
  mtx ans;
@@ -75,6 +77,7 @@ mtx mtxload(char *filename, int nrows, int ncols){
  ans.data=matrix;
  return ans;
 }
+//save a matrix in a text file
 void mtxsave(char *filename, mtx matrix){
  int j;
  FILE *file;
@@ -105,7 +108,7 @@ mtx mtxsum(mtx matrix1, mtx matrix2){
  sum.data=answ;
  return sum;
 }
-
+//matrix subtraction
 mtx mtxsub(mtx matrix1, mtx matrix2){
  mtx sum;
  sum.nrows=matrix1.nrows;
@@ -121,7 +124,8 @@ mtx mtxsub(mtx matrix1, mtx matrix2){
  sum.data=answ;
  return sum;
 }
-
+//mutiply each term of matrix1 by the corresponding
+//will not verify the dimensions
 mtx mtxtermsmult(mtx matrix1, mtx matrix2){
  int j;
  mtx result=nullmatrix(matrix1.nrows, matrix1.ncols);
@@ -132,7 +136,7 @@ mtx mtxtermsmult(mtx matrix1, mtx matrix2){
  }
  return result;
 }
-//matrix multiplication by a real
+//multiply each term of matrix by the value of q
 mtx mtxmult(mtx matrix, long double q){
  mtx mult;
  mult.nrows=matrix.nrows;
@@ -148,7 +152,9 @@ mtx mtxmult(mtx matrix, long double q){
  mult.data=answ;
  return mult;
 }
-//matrix multiplication, it will not verify the dimension of matrix
+//matrix multiplication
+//will not verify the dimension of matrix
+//its not the most efficient method
 mtx mtxprod(mtx matrix1, mtx matrix2){
  mtx prod;
  prod.nrows=matrix1.nrows;
@@ -183,7 +189,7 @@ mtx transpose(mtx matrix){
  answ.data=trans;
  return answ;
 }
-//copy a matrix to another address
+//return a copy of matrix A
 mtx mtxclone(mtx A){
  mtx ans;
  int j,nrows, ncols;
@@ -202,6 +208,7 @@ mtx mtxclone(mtx A){
  return ans;
 }
 
+//it will cut the matrix starting in position srowcut:scolumncut with nrows lines and ncols columns ahead
 mtx mtxcut(mtx matrix, int srowcut, int nrows, int scolumncut, int ncols){
  mtx result=nullmatrix(nrows, ncols);
  int j, line, column;
@@ -215,6 +222,7 @@ mtx mtxcut(mtx matrix, int srowcut, int nrows, int scolumncut, int ncols){
  return result;
 }
 
+//it will multiply each term by the corresponding and sum
 long double vectprod(mtx vec1, mtx vec2){
  long double result=0.0;
  int j;
@@ -226,6 +234,8 @@ long double vectprod(mtx vec1, mtx vec2){
  return result;
 }
 
+//it will copy matrix2 to the address of matrix1
+//it will realloc matrix1
 void mtxcopy(mtx *matrix1, mtx matrix2){
  int j, difsize=0;
  if(matrix1->nrows != matrix2.nrows){
@@ -245,20 +255,22 @@ void mtxcopy(mtx *matrix1, mtx matrix2){
   }
  }
 }
-
+//it will free the buffer of matrix
 void mtxfree(mtx *matrix){
  for(int i=0; i<matrix->nrows; i++){
   free(matrix->data[i]);
  }
  free(matrix->data);
 }
-
+//it will replace the line "line" of matrix by the line matrix "line"
+//will not verify the dimensions
 void putline(mtx *matrix, mtx line, int posi){
  int ncols=matrix->ncols;
  for(int i=0; i<ncols; i++){
   matrix->data[posi][i]=line.data[0][i];
  }
 }
+//it will fit the line matrix "line" in the position posi of matrix
 void addline(mtx *matrix, mtx line, int posi){
  mtx bak;
  bak=mtxclone(*matrix);
@@ -275,7 +287,7 @@ void addline(mtx *matrix, mtx line, int posi){
   }
  }
 }
-
+//do the same with columns
 void putcol(mtx *matrix, mtx col, int posi){
  int nrows=matrix->nrows;
  for(int i=0; i<nrows; i++){

@@ -6,11 +6,14 @@ void main(){
  mtx **w, input, y;
  int *qtneurons, qtlayers, qtinput, ftype;
  ftype=0;
+//quantity of input including the threshold
  qtinput=5;
  qtlayers=2;
  qtneurons=(int *)malloc(qtlayers*sizeof(int));
  qtneurons[0]=10;
  qtneurons[1]=3;
+//load a network
+//the quantity of inputs dont include the threshold
  w=loadnet("layers", "layer", qtneurons, qtlayers, qtinput-1);
 
  input=nullmatrix(1,qtinput);
