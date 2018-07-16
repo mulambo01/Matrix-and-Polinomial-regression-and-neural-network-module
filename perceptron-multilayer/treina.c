@@ -17,7 +17,7 @@ void main(){
  qtlayers=2;
  qtneurons=(int *)malloc(qtlayers*sizeof(int));
  qtinput=5;//4 +1
- qtneurons[0]=10;
+ qtneurons[0]=15;
  qtneurons[1]=3;
  qtdatabyrow=qtinput+qtneurons[1];
  samples=mtxload("Tabela3.txt", qtspl, qtdatabyrow);
