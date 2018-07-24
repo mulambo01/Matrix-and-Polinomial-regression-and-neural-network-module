@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -13,7 +14,7 @@ void main(){
  ftype=0;
  precis=10.e-6;
  lrn=0.1;
- qtspl=130;
+ qtspl=120;
  qtlayers=2;
  qtneurons=(int *)malloc(qtlayers*sizeof(int));
  qtinput=5;//4 +1
@@ -30,15 +31,15 @@ void main(){
  sample=nullmatrix(1,1);
  steps=0;
  lastEqm=0.0;
- Eqm=meansqrerr(samples, ds, w, qtneurons, qtlayers, ftype);
+ Eqm=meansqrerr(samples, w, qtneurons, qtlayers, ds, ftype);
  while(fabsl(Eqm-lastEqm)>precis){
   lastEqm=Eqm;
   for(i=0; i<samples.nrows; i++){
    mtxcopy(&sample,mtxcut(samples, i, 1, 0, qtinput));
    mtxcopy(&d,mtxcut(ds, i, 1, 0, ds.ncols));
-   adjust(sample, d, w, qtneurons, qtlayers, lrn, ftype);
+   adjust(sample, w, qtneurons, qtlayers, d, lrn, ftype);
   }
-  Eqm=meansqrerr(samples, ds, w, qtneurons, qtlayers, ftype);
+  Eqm=meansqrerr(samples, w, qtneurons, qtlayers, ds, ftype);
   steps++;
  }
 savenet("layers", "layer",w, qtneurons, qtlayers);
