@@ -45,6 +45,7 @@ void main(){
   Eqm=meansqrerr(samples, w, qtneurons, qtlayers, ds, ftype);
   steps++;
  }
+printf("number of steps: %d\n", steps);
 savenet("layers", "layer",w, qtneurons, qtlayers);
 }
 
