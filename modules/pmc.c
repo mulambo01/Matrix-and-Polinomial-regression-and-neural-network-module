@@ -10,6 +10,8 @@
 #define SIGM 0
 //hyberbolic tangent
 #define TGHYP 1
+//linear function
+#define LINEAR 2
 
 //return the sigmoid function
 long double sigm(long double u){
@@ -19,13 +21,31 @@ long double sigm(long double u){
 long double sigm1(long double u){
  return (1.0-powl(sigm(u),2));
 }
+long double tghyp(long double u){
+ return (tanh(u));
+}
+
+long double tghyp1(long double u){
+ return (1.0/(powl(cosh(u),2)));
+}
+
+long double linear(long double u){
+ return (u);
+}
+
+long double linear1(long double u){
+ return (1.0);
+}
+
 //return the value of function of type "ftype"
 long double func(long double u, int ftype){
  if(ftype==SIGM)return sigm(u);
+ else if(ftype==TGHYP)return tghyp(u);
 }
 //return the value of derivative function of type "ftype"
 long double func1(long double u, int ftype){
  if(ftype==SIGM)return sigm1(u);
+ else if(ftype==TGHYP)return tghyp1(u);
 }
 
 //create a neural network
@@ -82,14 +102,14 @@ mtx layeransw(mtx input, int ftype){
 //array qtneurons stores the quantity of neurons in each layer
 //qtlayers is the quantity of layers
 //ftype is the type of activation function
-mtx netthink(mtx x, mtx **w, int *qtneurons, int qtlayers, int ftype){
+mtx netthink(mtx x, mtx **w, int *qtneurons, int qtlayers, int *ftype){
  mtx y, input, x0;
  x0=crystalmatrix(1,1,-1.0);
  input=mtxclone(x);
  y=nullmatrix(1,1);
  for(int i=0; i<qtlayers; i++){
   mtxcopy(&input, layerthink(input, w[i], qtneurons[i]));
-  mtxcopy(&y, layeransw(input, ftype));
+  mtxcopy(&y, layeransw(input, ftype[i]));
   mtxcopy(&input, y);
   addcol(&input, x0, 0);
  }
@@ -97,7 +117,7 @@ mtx netthink(mtx x, mtx **w, int *qtneurons, int qtlayers, int ftype){
 }
 
 //just call the function netthink and process the output returning the sample class
-mtx netansw(mtx x, mtx **w, int *qtneurons, int qtlayers, int ftype){
+mtx netansw(mtx x, mtx **w, int *qtneurons, int qtlayers, int *ftype){
  mtx answ, y;
  y=netthink(x, w, qtneurons, qtlayers, ftype);
  answ=mtxclone(y);
@@ -113,7 +133,7 @@ mtx netansw(mtx x, mtx **w, int *qtneurons, int qtlayers, int ftype){
 }
 
 //it will adjust each weight of a network using the inputs and outputs
-void fitbydelta(mtx x, mtx **w, int qtlayers, mtx d, mtx *input, mtx *y, long double lrn, int ftype){
+void fitbydelta(mtx x, mtx **w, int qtlayers, mtx d, mtx *input, mtx *y, long double lrn, int *ftype){
  mtx *delta, change;
  int qtneurons, qtnfrwrd, i, j, layer;
  long double der, del;
@@ -124,7 +144,7 @@ void fitbydelta(mtx x, mtx **w, int qtlayers, mtx d, mtx *input, mtx *y, long do
  change=nullmatrix(1,1);
  delta[layer]=nullmatrix(1,qtneurons);
  for(i=0; i<qtneurons; i++){
-  der=func1(input[layer].data[0][i], ftype);
+  der=func1(input[layer].data[0][i], ftype[layer]);
   del=(d.data[0][i]-y[layer].data[0][i])*der;
   delta[layer].data[0][i]=del;
   mtxcopy(&change,mtxmult(y[layer-1], del*lrn));
@@ -136,7 +156,7 @@ void fitbydelta(mtx x, mtx **w, int qtlayers, mtx d, mtx *input, mtx *y, long do
   qtneurons=input[layer].ncols;
   delta[layer]=nullmatrix(1,qtneurons);
   for(i=0; i<qtneurons; i++){
-   der=func1(input[layer].data[0][i], ftype);
+   der=func1(input[layer].data[0][i], ftype[layer]);
    del=0.0;
    for(j=0; j<qtnfrwrd; j++){
     del=del+delta[layer+1].data[0][j]*w[layer+1][j].data[0][i];
@@ -149,24 +169,24 @@ void fitbydelta(mtx x, mtx **w, int qtlayers, mtx d, mtx *input, mtx *y, long do
  }
 //first layer
  qtnfrwrd=qtneurons;
- qtneurons=input[0].ncols;
- delta[0]=nullmatrix(1,qtneurons);
+ qtneurons=input[layer].ncols;
+ delta[layer]=nullmatrix(1,qtneurons);
  for(i=0; i<qtneurons; i++){
-  der=func1(input[0].data[0][i], ftype);
+  der=func1(input[layer].data[0][i], ftype[layer]);
   del=0.0;
   for(j=0; j<qtnfrwrd; j++){
-   del=del+delta[1].data[0][j]*w[1][j].data[0][i];
+   del=del+delta[layer+1].data[0][j]*w[layer+1][j].data[0][i];
   }
   del=-del*der;
-  delta[0].data[0][i]=del;
+  delta[layer].data[0][i]=del;
   mtxcopy(&change, mtxmult(x, del*lrn));
-  mtxcopy(&w[0][i], mtxsum(w[0][i],change));
+  mtxcopy(&w[layer][i], mtxsum(w[layer][i],change));
  }
 //end
 }
 
 //it will genearate the arrays input and y and pass them to the function fitbydelta
-mtx adjust(mtx x, mtx **w, int *qtneurons, int qtlayers, mtx d, long double lrn, int ftype){
+mtx adjust(mtx x, mtx **w, int *qtneurons, int qtlayers, mtx d, long double lrn, int *ftype){
  mtx *y, *input, yy, ii, x0;
  x0=crystalmatrix(1,1,-1.0);
  ii=mtxclone(x);
@@ -175,7 +195,7 @@ mtx adjust(mtx x, mtx **w, int *qtneurons, int qtlayers, mtx d, long double lrn,
  input=(mtx *)malloc(qtlayers*sizeof(mtx));
  for(int i=0; i<qtlayers; i++){
   mtxcopy(&ii, layerthink(ii, w[i], qtneurons[i]));
-  mtxcopy(&yy, layeransw(ii, ftype));
+  mtxcopy(&yy, layeransw(ii, ftype[i]));
   input[i]=mtxclone(ii);
   if(i!=qtlayers-1){
    addcol(&yy, x0, 0);
@@ -187,7 +207,7 @@ mtx adjust(mtx x, mtx **w, int *qtneurons, int qtlayers, mtx d, long double lrn,
 }
 
 //calculate the mean square error of the samples
-long double meansqrerr(mtx samples, mtx **w, int *qtneurons, int qtlayers, mtx d, int ftype){
+long double meansqrerr(mtx samples, mtx **w, int *qtneurons, int qtlayers, mtx d, int *ftype){
  long double result=0.0;
  int qtspl=samples.nrows;
  int qtinput=samples.ncols;
