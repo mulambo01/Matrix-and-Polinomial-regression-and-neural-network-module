@@ -41,11 +41,13 @@ long double linear1(long double u){
 long double func(long double u, int ftype){
  if(ftype==SIGM)return sigm(u);
  else if(ftype==TGHYP)return tghyp(u);
+ else if(ftype==LINEAR)return linear(u);
 }
 //return the value of derivative function of type "ftype"
 long double func1(long double u, int ftype){
  if(ftype==SIGM)return sigm1(u);
  else if(ftype==TGHYP)return tghyp1(u);
+ else if(ftype==LINEAR)return linear1(u);
 }
 
 //create a neural network
