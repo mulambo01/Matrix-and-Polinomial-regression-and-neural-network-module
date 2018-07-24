@@ -7,7 +7,7 @@ typedef struct
 
 mtx crystalmatrix(int nrows, int ncols, long double value);
 mtx nullmatrix(int nrows, int ncols);
-mtx randmatrix(int nrows, int ncols);
+mtx randmatrix(int nrows, int ncols, unsigned int seed);
 void draw(mtx matrix);
 mtx mtxload(char *filename, int nrows, int ncols);
 void mtxsave(char *filename, mtx matrix);

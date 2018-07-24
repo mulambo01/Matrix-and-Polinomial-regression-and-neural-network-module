@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include "../modules/linsys.h"
+#include "../modules/matrix.h"
 
 int g(mtx w, mtx input){
  int qtw=w.ncols;
@@ -16,7 +16,7 @@ void main(){
  qtw=5;
  qtspl=35;
  input=nullmatrix(1,5);
- w=load("pesos.txt", 1, qtw);
+ w=mtxload("neuron.dat", 1, qtw);
  input.data[0][0]=-1.0;
  for(int i=1; i<qtw; i++){
   scanf("%Lf", &input.data[0][i]);

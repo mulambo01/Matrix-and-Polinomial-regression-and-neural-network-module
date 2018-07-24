@@ -54,16 +54,16 @@ long double func1(long double u, int ftype){
 //qtneurons is an array with the quantity of neurons by layer
 //qtlayer defines the quantity of layers
 //qtinput define the quantity of data input without the threshold
-mtx **createneurons(int *qtneurons, int qtlayers, int qtinput){
+mtx **createneurons(int *qtneurons, int qtlayers, int qtinput, unsigned int seed){
  int j, qtw;
  mtx **net=(mtx **)malloc(qtlayers*sizeof(mtx *));
  qtw=qtinput;
  for(int i=0; i<qtlayers; i++){
   net[i]=(mtx *)malloc(qtneurons[i]*sizeof(mtx));
   for(j=0; j<qtneurons[i]; j++){
-   net[i][j]=randmatrix(1,qtw);
+   net[i][j]=randmatrix(1, qtw, seed);
   }
-  qtw=qtneurons[i]+1;//+1 pcausa do -1
+  qtw=qtneurons[i]+1;//+1 to include bias
  }
  return net;
 }

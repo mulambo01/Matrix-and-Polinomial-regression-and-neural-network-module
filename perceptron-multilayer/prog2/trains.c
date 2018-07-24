@@ -20,7 +20,7 @@ void main(){
  qtneurons[1]=3;
  qtdatabyrow=qtinput+qtneurons[1];
  samples=mtxload("Table.dat", qtspl, qtdatabyrow);
- w=createneurons(qtneurons, qtlayers, qtinput);
+ w=createneurons(qtneurons, qtlayers, qtinput, 1);
  ds=mtxcut(samples,0, qtspl, qtinput, qtdatabyrow-qtinput);
  samples=mtxcut(samples, 0, qtspl, 0, qtinput);
 

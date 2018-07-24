@@ -1,7 +1,7 @@
-#include "../modules/linsys.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "../modules/matrix.h"
 
 long double meansqrerr(mtx w, mtx d, mtx samples){
  long double result=0.0;
@@ -24,10 +24,10 @@ void main(){
  qtspl=35;
  N=0.0025;
  precis=powl(2.0,-65);
- samples=mtxload("apendice2.txt", qtspl, qtw+1);
+ samples=mtxload("Table.dat", qtspl, qtw+1);
  d=mtxcut(samples,0,qtspl,qtw,1);
  samples=mtxcut(samples,0,qtspl,0,qtw);
- w=randmatrix(1,qtw);
+ w=randmatrix(1,qtw, 1);
 // w=mtxload("w2.dat",1,qtw);
  steps=0;
  lastE=0.0;
@@ -43,9 +43,6 @@ void main(){
   E=meansqrerr(w,d,samples);
   steps=steps+1;
  }
- mtxsave("pesos.txt", w);
+ mtxsave("neuron.dat", w);
  printf("number of steps: %d\n", steps);
- printf("meansqrerr: %.10Le\n", E);
- printf("last meansqrerr: %.10Le\n", lastE);
- printf("delta: %.10Le\n", E-lastE);
 }

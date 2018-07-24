@@ -8,7 +8,7 @@ long double sigm(long double u);
 long double sigm2(long double u);
 long double func(long double u, int ftype);
 long double func2(long double u, int ftype);
-mtx **createneurons(int *qtneurons, int qtlayers, int qtinput);
+mtx **createneurons(int *qtneurons, int qtlayers, int qtinput, unsigned int seed);
 long double neuronthink(mtx x, mtx w);
 long double neuronansw(long double input, int ftype);
 mtx layerthink(mtx x, mtx *w, int qtneurons);

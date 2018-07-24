@@ -23,7 +23,7 @@ void main(){
  samples=mtxload("Table.dat", qtspl, qtdatabyrow);
  addcol(&samples, crystalmatrix(qtspl, 1, -1.0), 0); //including bias
  qtdatabyrow=qtdatabyrow+1; //now it is
- w=createneurons(qtneurons, qtlayers, qtinput);
+ w=createneurons(qtneurons, qtlayers, qtinput, 1);
  ds=mtxcut(samples,0, qtspl, qtinput, qtdatabyrow-qtinput);
  samples=mtxcut(samples, 0, qtspl, 0, qtinput);
 
