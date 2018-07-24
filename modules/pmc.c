@@ -113,7 +113,7 @@ mtx netansw(mtx x, mtx **w, int *qtneurons, int qtlayers, int ftype){
 }
 
 //it will adjust each weight of a network using the inputs and outputs
-void fitbydelta(mtx **w, mtx *input, mtx x, mtx *y, mtx d, int qtlayers, long double lrn, int ftype){
+void fitbydelta(mtx x, mtx **w, int qtlayers, mtx d, mtx *input, mtx *y, long double lrn, int ftype){
  mtx *delta, change;
  int qtneurons, qtnfrwrd, i, j, layer;
  long double der, del;
@@ -166,7 +166,7 @@ void fitbydelta(mtx **w, mtx *input, mtx x, mtx *y, mtx d, int qtlayers, long do
 }
 
 //it will genearate the arrays input and y and pass them to the function fitbydelta
-mtx adjust(mtx x, mtx d, mtx **w, int *qtneurons, int qtlayers, long double lrn, int ftype){
+mtx adjust(mtx x, mtx **w, int *qtneurons, int qtlayers, mtx d, long double lrn, int ftype){
  mtx *y, *input, yy, ii, x0;
  x0=crystalmatrix(1,1,-1.0);
  ii=mtxclone(x);
@@ -183,11 +183,11 @@ mtx adjust(mtx x, mtx d, mtx **w, int *qtneurons, int qtlayers, long double lrn,
   y[i]=mtxclone(yy);
   mtxcopy(&ii, yy);
  }
- fitbydelta(w, input, x, y, d, qtlayers, lrn, ftype);
+ fitbydelta(x, w, qtlayers, d, input, y, lrn, ftype);
 }
 
 //calculate the mean square error of the samples
-long double meansqrerr(mtx samples, mtx d, mtx **w, int *qtneurons, int qtlayers, int ftype){
+long double meansqrerr(mtx samples, mtx **w, int *qtneurons, int qtlayers, mtx d, int ftype){
  long double result=0.0;
  int qtspl=samples.nrows;
  int qtinput=samples.ncols;
@@ -264,3 +264,4 @@ mtx** loadnet(char *dirname, char *fileprefix, int *qtneurons, int qtlayers, int
  }
  return w;
 }
+
