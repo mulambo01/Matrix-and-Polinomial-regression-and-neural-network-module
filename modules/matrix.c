@@ -29,12 +29,11 @@ mtx nullmatrix(int nrows, int ncols){
  return crystalmatrix(nrows, ncols, 0.0);
 }
 //return a matrix of elements with random values
-mtx randmatrix(int nrows, int ncols, unsigned int seed){
+mtx randmatrix(int nrows, int ncols){
  int j;
  mtx ans;
  ans.nrows=nrows;
  ans.ncols=ncols;
- srand(seed);
 
  long double **matrix=(long double **)malloc(nrows*sizeof(long double *));
  for(int i=0; i<nrows; i++){

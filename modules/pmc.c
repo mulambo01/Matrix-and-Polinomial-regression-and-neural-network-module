@@ -5,6 +5,18 @@
 #include <sys/stat.h>
 #include "matrix.h"
 
+typedef struct
+{
+ int qtneurons;
+ mtx *w;
+}pmclayer;
+
+typedef struct
+{
+ int qtlayers;
+ pmclayer *layer ;
+}pmcnet;
+
 //types of functions
 //sigmoid function
 #define SIGM 0
@@ -50,21 +62,28 @@ long double func1(long double u, int ftype){
  else if(ftype==LINEAR)return linear1(u);
 }
 
-//create a neural network
-//qtneurons is an array with the quantity of neurons by layer
-//qtlayer defines the quantity of layers
-//qtinput define the quantity of data input without the threshold
-mtx **createneurons(int *qtneurons, int qtlayers, int qtinput, unsigned int seed){
- int j, qtw;
- mtx **net=(mtx **)malloc(qtlayers*sizeof(mtx *));
- qtw=qtinput;
- for(int i=0; i<qtlayers; i++){
-  net[i]=(mtx *)malloc(qtneurons[i]*sizeof(mtx));
-  for(j=0; j<qtneurons[i]; j++){
-   net[i][j]=randmatrix(1, qtw, seed);
-  }
-  qtw=qtneurons[i]+1;//+1 to include bias
+pmclayer pmccreatelayer(int qtneurons, int qtw){
+ mtx *w=(mtx *)malloc(qtneurons*sizeof(mtx));
+ pmclayer layer;
+ for(int i=0; i<qtneurons; i++){
+  w[i]=randmatrix(1, qtw);
  }
+ layer.qtneurons=qtneurons;
+ layer.w=w;
+ return layer;
+}
+
+pmcnet pmccreatenet(int *qtneurons, int qtlayers, int qtw1){
+ int qtw;
+ pmcnet net;
+ pmclayer *layer=(pmclayer *)malloc(qtlayers*sizeof(pmclayer));
+ qtw=qtw1;
+ for(int i=0; i<qtlayers; i++){
+  layer[i]=pmccreatelayer(qtneurons[i], qtw);
+  qtw=qtneurons[i]+1; //+1 to include bias
+ }
+ net.layer=layer;
+ net.qtlayers=qtlayers;
  return net;
 }
 
@@ -80,11 +99,12 @@ long double neuronansw(long double input, int ftype){
  return func(input, ftype);
 }
 //return the linear combinations of each neuron with the sample x
-mtx layerthink(mtx x, mtx *w, int qtneurons){
+mtx layerthink(mtx x, pmclayer layer){
  mtx input;
+ int qtneurons=layer.qtneurons;
  input=nullmatrix(1, qtneurons);
  for(int i=0; i<qtneurons; i++){
-  input.data[0][i]=neuronthink(x, w[i]);
+  input.data[0][i]=neuronthink(x, layer.w[i]);
  }
  return input;
 }
@@ -104,13 +124,14 @@ mtx layeransw(mtx input, int ftype){
 //array qtneurons stores the quantity of neurons in each layer
 //qtlayers is the quantity of layers
 //ftype is the type of activation function
-mtx netthink(mtx x, mtx **w, int *qtneurons, int qtlayers, int *ftype){
+mtx netthink(mtx x, pmcnet net, int *ftype){
  mtx y, input, x0;
+ int qtlayers=net.qtlayers;
  x0=crystalmatrix(1,1,-1.0);
  input=mtxclone(x);
  y=nullmatrix(1,1);
  for(int i=0; i<qtlayers; i++){
-  mtxcopy(&input, layerthink(input, w[i], qtneurons[i]));
+  mtxcopy(&input, layerthink(input, net.layer[i]));
   mtxcopy(&y, layeransw(input, ftype[i]));
   mtxcopy(&input, y);
   addcol(&input, x0, 0);
@@ -119,9 +140,9 @@ mtx netthink(mtx x, mtx **w, int *qtneurons, int qtlayers, int *ftype){
 }
 
 //just call the function netthink and process the output returning the sample class
-mtx netansw(mtx x, mtx **w, int *qtneurons, int qtlayers, int *ftype){
+mtx netansw(mtx x, pmcnet net, int *ftype){
  mtx answ, y;
- y=netthink(x, w, qtneurons, qtlayers, ftype);
+ y=netthink(x, net, ftype);
  answ=mtxclone(y);
  for(int i=0; i<answ.ncols; i++){
   if(answ.data[0][i]>0.5){
@@ -135,13 +156,14 @@ mtx netansw(mtx x, mtx **w, int *qtneurons, int qtlayers, int *ftype){
 }
 
 //it will adjust each weight of a network using the inputs and outputs
-void fitbydelta(mtx x, mtx **w, int qtlayers, mtx d, mtx *input, mtx *y, long double lrn, int *ftype){
+void fitbydelta(mtx x, pmcnet net, mtx d, mtx *input, mtx *y, long double lrn, int *ftype){
  mtx *delta, change;
- int qtneurons, qtnfrwrd, i, j, layer;
+ int qtneurons, qtnfrwrd, qtlayers, i, j, layer;
  long double der, del;
+ qtlayers=net.qtlayers;
  delta=(mtx *)malloc(qtlayers*sizeof(mtx));
 //last layer
- layer=qtlayers-1;
+ layer=net.qtlayers-1;
  qtneurons=input[layer].ncols;
  change=nullmatrix(1,1);
  delta[layer]=nullmatrix(1,qtneurons);
@@ -150,7 +172,7 @@ void fitbydelta(mtx x, mtx **w, int qtlayers, mtx d, mtx *input, mtx *y, long do
   del=(d.data[0][i]-y[layer].data[0][i])*der;
   delta[layer].data[0][i]=del;
   mtxcopy(&change,mtxmult(y[layer-1], del*lrn));
-  mtxcopy(&w[layer][i],mtxsum(w[layer][i],change));
+  mtxcopy(&net.layer[layer].w[i],mtxsum(net.layer[layer].w[i],change));
  }
 //middle layers
  for(layer--;layer>0;layer--){
@@ -161,12 +183,12 @@ void fitbydelta(mtx x, mtx **w, int qtlayers, mtx d, mtx *input, mtx *y, long do
    der=func1(input[layer].data[0][i], ftype[layer]);
    del=0.0;
    for(j=0; j<qtnfrwrd; j++){
-    del=del+delta[layer+1].data[0][j]*w[layer+1][j].data[0][i];
+    del=del+delta[layer+1].data[0][j]*net.layer[layer+1].w[j].data[0][i];
    }
    del=-del*der;
    delta[layer].data[0][i]=del;
    mtxcopy(&change, mtxmult(y[layer-1], del*lrn));
-   mtxcopy(&w[layer][i], mtxsum(w[layer][i],change));
+   mtxcopy(&net.layer[layer].w[i], mtxsum(net.layer[layer].w[i], change));
   }
  }
 //first layer
@@ -177,26 +199,27 @@ void fitbydelta(mtx x, mtx **w, int qtlayers, mtx d, mtx *input, mtx *y, long do
   der=func1(input[layer].data[0][i], ftype[layer]);
   del=0.0;
   for(j=0; j<qtnfrwrd; j++){
-   del=del+delta[layer+1].data[0][j]*w[layer+1][j].data[0][i];
+   del=del+delta[layer+1].data[0][j]*net.layer[layer+1].w[j].data[0][i];
   }
   del=-del*der;
   delta[layer].data[0][i]=del;
   mtxcopy(&change, mtxmult(x, del*lrn));
-  mtxcopy(&w[layer][i], mtxsum(w[layer][i],change));
+  mtxcopy(&net.layer[layer].w[i], mtxsum(net.layer[layer].w[i],change));
  }
 //end
 }
 
 //it will genearate the arrays input and y and pass them to the function fitbydelta
-mtx adjust(mtx x, mtx **w, int *qtneurons, int qtlayers, mtx d, long double lrn, int *ftype){
+void adjust(mtx x, pmcnet net, mtx d, long double lrn, int *ftype){
  mtx *y, *input, yy, ii, x0;
+ int qtlayers=net.qtlayers;
  x0=crystalmatrix(1,1,-1.0);
  ii=mtxclone(x);
  yy=nullmatrix(1,1);
  y=(mtx *)malloc(qtlayers*sizeof(mtx));
  input=(mtx *)malloc(qtlayers*sizeof(mtx));
  for(int i=0; i<qtlayers; i++){
-  mtxcopy(&ii, layerthink(ii, w[i], qtneurons[i]));
+  mtxcopy(&ii, layerthink(ii, net.layer[i]));
   mtxcopy(&yy, layeransw(ii, ftype[i]));
   input[i]=mtxclone(ii);
   if(i!=qtlayers-1){
@@ -205,21 +228,42 @@ mtx adjust(mtx x, mtx **w, int *qtneurons, int qtlayers, mtx d, long double lrn,
   y[i]=mtxclone(yy);
   mtxcopy(&ii, yy);
  }
- fitbydelta(x, w, qtlayers, d, input, y, lrn, ftype);
+ fitbydelta(x, net, d, input, y, lrn, ftype);
+}
+
+void adjustbymomentum(pmcnet *net, pmcnet *oldnet1, pmcnet *oldnet2, long double momentum){
+ mtx var;
+ long double **wchange;
+ var=nullmatrix(1,1);
+ int j, qtlayers;
+ qtlayers=net->qtlayers;
+ for(int i=0; i<qtlayers; i++){
+  for(j=0; j<net->layer[i].qtneurons; j++){
+   mtxcopy(&var, mtxsub(oldnet1->layer[i].w[j], oldnet2->layer[i].w[j]));
+   mtxcopy(&var, mtxmult(var, momentum));
+draw(var);
+   mtxcopy(&(net->layer[i].w[j]),mtxsum(net->layer[i].w[j], var));
+   wchange=oldnet2->layer[i].w[j].data;
+   oldnet2->layer[i].w[j].data=oldnet1->layer[i].w[j].data;
+   oldnet1->layer[i].w[j].data=wchange;
+   mtxcopy(&oldnet1->layer[i].w[j], net->layer[i].w[j]);
+  }
+ }
 }
 
 //calculate the mean square error of the samples
-long double meansqrerr(mtx samples, mtx **w, int *qtneurons, int qtlayers, mtx d, int *ftype){
+long double meansqrerr(mtx samples, pmcnet net, mtx d, int *ftype){
  long double result=0.0;
  int qtspl=samples.nrows;
  int qtinput=samples.ncols;
+ int qtlayers;
  mtx u, x, output, error;
  u=nullmatrix(d.nrows, d.ncols);
  x=nullmatrix(1, qtinput);
  output=nullmatrix(1, d.ncols);
  for(int i=0; i<qtspl; i++){
   mtxcopy(&x,mtxcut(samples, i, 1, 0, qtinput));
-  mtxcopy(&output, netthink(x, w, qtneurons, qtlayers, ftype));
+  mtxcopy(&output, netthink(x, net, ftype));
   putline(&u, output, i);
  }
  mtxcopy(&u, mtxmult(u, -1.0));
@@ -231,11 +275,12 @@ long double meansqrerr(mtx samples, mtx **w, int *qtneurons, int qtlayers, mtx d
 
 //save a layer in a text file
 //receive the array of weights by neuron, put it in a matrix and save it
-void savelayer(char *filename, mtx *w, int qtneurons){
+void savelayer(char *filename, pmclayer layer){
  mtx wbylayer;
- wbylayer=nullmatrix(qtneurons, w[0].ncols);
+ int qtneurons=layer.qtneurons;
+ wbylayer=nullmatrix(qtneurons, layer.w[0].ncols);
  for(int i=0; i<qtneurons; i++){
-  putline(&wbylayer, w[i], i);
+  putline(&wbylayer, layer.w[i], i);
  }
  mtxsave(filename, wbylayer);
 }
@@ -243,8 +288,9 @@ void savelayer(char *filename, mtx *w, int qtneurons){
 //save a network in a text file
 //dirname is the name of directory
 //fileprefix is the the prefix that each layer file will receive
-void savenet(char *dirname, char *fileprefix, mtx **w, int *qtneurons, int qtlayers){
- int namelen, sufixlen;
+void savenet(char *dirname, char *fileprefix, pmcnet net){
+ int namelen, sufixlen, qtlayers;
+ qtlayers=net.qtlayers;
  sufixlen=1+(int)log10(qtlayers-1);
  namelen=strlen(dirname)+strlen(fileprefix)+sufixlen+10;
  char filename[namelen], sufix[sufixlen];
@@ -253,37 +299,66 @@ void savenet(char *dirname, char *fileprefix, mtx **w, int *qtneurons, int qtlay
   sprintf(sufix, "%d", (i+(int)pow(10.0,sufixlen)));
   sufix[0]='-';
   sprintf(filename, "%s/%s%s.dat",dirname, fileprefix, sufix);
-  savelayer(filename, w[i], qtneurons[i]);
+  savelayer(filename, net.layer[i]);
  }
 }
 
 //load a neural layer by a text file
-mtx* loadlayer(char *filename, int qtneurons, int qtw){
- mtx layer, *w;
+pmclayer loadlayer(char *filename, int qtneurons, int qtw){
+ mtx fileload, *w;
+ pmclayer layer;
  w=(mtx *)malloc(qtneurons*sizeof(mtx));
- layer=mtxload(filename, qtneurons, qtw);
+ fileload=mtxload(filename, qtneurons, qtw);
  for(int i=0; i<qtneurons; i++){
-  w[i]=mtxcut(layer, i, 1, 0, qtw);
- } 
- return w;
+  w[i]=mtxcut(fileload, i, 1, 0, qtw);
+ }
+ layer.w=w;
+ layer.qtneurons=qtneurons;
+ return layer;
 }
 
 //load a neural network by the files of a directory with a prefix
-mtx** loadnet(char *dirname, char *fileprefix, int *qtneurons, int qtlayers, int qtinput){
- mtx **w;
+pmcnet loadnet(char *dirname, char *fileprefix, int *qtneurons, int qtlayers, int qtw1){
+ pmclayer *layer=(pmclayer *)malloc(qtlayers*sizeof(layer));
+ pmcnet net;
  int namelen, sufixlen, qtw;
  sufixlen=1+(int)log10(qtlayers-1);
  namelen=strlen(dirname)+strlen(fileprefix)+sufixlen+10;
  char filename[namelen], sufix[sufixlen];
- w=(mtx **)malloc(qtlayers*sizeof(mtx *));
- qtw=qtinput+1; //to include the limiar
+ qtw=qtw1;
  for(int i=0; i<qtlayers; i++){
   sprintf(sufix, "%d", (i+(int)pow(10.0,sufixlen)));
   sufix[0]='-';
   sprintf(filename, "%s/%s%s.dat",dirname, fileprefix, sufix);
-  w[i]=loadlayer(filename, qtneurons[i], qtw);
+  layer[i]=loadlayer(filename, qtneurons[i], qtw);
   qtw=qtneurons[i]+1;
  }
- return w;
+ net.layer=layer;
+ net.qtlayers=qtlayers;
+ return net;
 }
 
+pmclayer clonelayer(pmclayer layer){
+ pmclayer clone;
+ int qtneurons=layer.qtneurons;
+ mtx *w=(mtx *)malloc(qtneurons*sizeof(mtx));
+ for(int i=0; i<qtneurons; i++){
+  w[i]=mtxclone(layer.w[i]);
+ }
+ clone.qtneurons=qtneurons;
+ clone.w=w;
+ return clone;
+}
+
+pmcnet clonenet(pmcnet net){
+ pmcnet clone;
+ pmclayer *layer;
+ int qtlayers=net.qtlayers;
+ layer=(pmclayer *)malloc(qtlayers*sizeof(pmclayer));
+ for(int i=0; i<qtlayers; i++){
+  layer[i]=net.layer[i];
+ }
+ clone.qtlayers=qtlayers;
+ clone.layer=layer;
+ return clone;
+}
