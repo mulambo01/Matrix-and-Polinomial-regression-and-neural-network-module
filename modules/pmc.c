@@ -241,12 +241,11 @@ void adjustbymomentum(pmcnet *net, pmcnet *oldnet1, pmcnet *oldnet2, long double
   for(j=0; j<net->layer[i].qtneurons; j++){
    mtxcopy(&var, mtxsub(oldnet1->layer[i].w[j], oldnet2->layer[i].w[j]));
    mtxcopy(&var, mtxmult(var, momentum));
-draw(var);
    mtxcopy(&(net->layer[i].w[j]),mtxsum(net->layer[i].w[j], var));
    wchange=oldnet2->layer[i].w[j].data;
    oldnet2->layer[i].w[j].data=oldnet1->layer[i].w[j].data;
    oldnet1->layer[i].w[j].data=wchange;
-   mtxcopy(&oldnet1->layer[i].w[j], net->layer[i].w[j]);
+   mtxcopy(&(oldnet1->layer[i].w[j]), net->layer[i].w[j]);
   }
  }
 }
@@ -356,7 +355,7 @@ pmcnet clonenet(pmcnet net){
  int qtlayers=net.qtlayers;
  layer=(pmclayer *)malloc(qtlayers*sizeof(pmclayer));
  for(int i=0; i<qtlayers; i++){
-  layer[i]=net.layer[i];
+  layer[i]=clonelayer(net.layer[i]);
  }
  clone.qtlayers=qtlayers;
  clone.layer=layer;
