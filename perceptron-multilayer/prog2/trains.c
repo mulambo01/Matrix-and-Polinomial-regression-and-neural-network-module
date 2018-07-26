@@ -4,46 +4,52 @@
 #include "../../modules/pmc.h"
 
 void main(){
- mtx samples, ds, **w, output, sample, d;
+ mtx samples, ds, output, sample, d;
+ pmcnet net, oldnet1, oldnet2;
  char filename[100];
- int i, j, qtspl, qtdatabyrow, *qtneurons, qtinput, qtlayers, steps, *ftype;
- long double Eqm, lastEqm, precis, lrn;
+ int i, j, qtspl, qtdatabyrow, *qtneurons, qtw1, qtlayers, steps, *ftype;
+ long double Eqm, lastEqm, precis, lrn, momentum;
 //start protocols
  precis=10.e-6;
  lrn=0.1;
+ momentum=0.9;
  qtspl=120;
  qtlayers=2;
  ftype=(int *)malloc(qtlayers*sizeof(int));
  qtneurons=(int *)malloc(qtlayers*sizeof(int));
- qtinput=5;//4+1 input + bias
+ qtw1=5;//4+1 input + bias
  qtneurons[0]=15;
  qtneurons[1]=3;
- qtdatabyrow=qtinput+qtneurons[1];
+ qtdatabyrow=qtw1+qtneurons[1];
  samples=mtxload("Table.dat", qtspl, qtdatabyrow);
- w=createneurons(qtneurons, qtlayers, qtinput, 1);
- ds=mtxcut(samples,0, qtspl, qtinput, qtdatabyrow-qtinput);
- samples=mtxcut(samples, 0, qtspl, 0, qtinput);
+ srand(2);
+ net=pmccreatenet(qtneurons, qtlayers, qtw1);
+ ds=mtxcut(samples,0, qtspl, qtw1, qtdatabyrow-qtw1);
+ samples=mtxcut(samples, 0, qtspl, 0, qtw1);
+
+ oldnet1=clonenet(net);
+ oldnet2=clonenet(net);
 
 //will repeat the adjust process until reachs the precision value
-
  ftype[0]=SIGM;
  ftype[1]=SIGM;
  d=nullmatrix(1,1);
  sample=nullmatrix(1,1);
  steps=0;
  lastEqm=0.0;
- Eqm=meansqrerr(samples, w, qtneurons, qtlayers, ds, ftype);
+ Eqm=meansqrerr(samples, net, ds, ftype);
  while(fabsl(Eqm-lastEqm)>precis){
   lastEqm=Eqm;
   for(i=0; i<samples.nrows; i++){
-   mtxcopy(&sample,mtxcut(samples, i, 1, 0, qtinput));
+   mtxcopy(&sample,mtxcut(samples, i, 1, 0, qtw1));
    mtxcopy(&d,mtxcut(ds, i, 1, 0, ds.ncols));
-   adjust(sample, w, qtneurons, qtlayers, d, lrn, ftype);
+   adjustbymomentum(&net, &oldnet1, &oldnet2, momentum);
+   adjust(sample, net, d, lrn, ftype);
   }
-  Eqm=meansqrerr(samples, w, qtneurons, qtlayers, ds, ftype);
+  Eqm=meansqrerr(samples, net, ds, ftype);
   steps++;
  }
 printf("number of steps: %d\n", steps);
-savenet("layers", "layer",w, qtneurons, qtlayers);
+savenet("layers", "layer", net);
 }
 
