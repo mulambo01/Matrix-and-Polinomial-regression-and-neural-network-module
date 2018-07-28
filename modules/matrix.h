@@ -26,3 +26,4 @@ void putline(mtx *matrix, mtx line, int posi);
 void addline(mtx *matrix, mtx line, int posi);
 void putcol(mtx *matrix, mtx col, int posi);
 void addcol(mtx *matrix, mtx col, int posi);
+mtx *mtxsplitlines(mtx matrix);

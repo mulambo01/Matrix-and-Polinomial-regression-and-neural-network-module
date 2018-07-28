@@ -286,6 +286,7 @@ void addline(mtx *matrix, mtx line, int posi){
    j++;
   }
  }
+ mtxfree(&bak);
 }
 //do the same with columns
 void putcol(mtx *matrix, mtx col, int posi){
@@ -295,7 +296,7 @@ void putcol(mtx *matrix, mtx col, int posi){
  }
 }
 void addcol(mtx *matrix, mtx col, int posi){
- mtx bak;
+ mtx bak,copy;
  bak=mtxclone(*matrix);
  int j=0;
  mtxfree(matrix);
@@ -305,8 +306,23 @@ void addcol(mtx *matrix, mtx col, int posi){
    putcol(matrix, col, i);
   }
   else{
-   putcol(matrix, mtxcut(bak, 0, bak.nrows, j, 1), i);
+   copy=mtxcut(bak, 0, bak.nrows, j, 1);
+   putcol(matrix, copy, i);
+   mtxfree(&copy);
    j++;
   }
  }
+ mtxfree(&bak);
 }
+
+mtx *mtxsplitlines(mtx matrix){
+ mtx *lines;
+ int nrows=matrix.nrows;
+ int ncols=matrix.ncols;
+ lines=(mtx *)malloc(matrix.nrows*sizeof(mtx));
+ for(int i=0; i<nrows; i++){
+  lines[i]=mtxcut(matrix, i, 1, 0, ncols);
+ }
+ return lines;
+}
+

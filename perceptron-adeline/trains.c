@@ -27,7 +27,7 @@ void main(){
  samples=mtxload("Table.dat", qtspl, qtw+1);
  d=mtxcut(samples,0,qtspl,qtw,1);
  samples=mtxcut(samples,0,qtspl,0,qtw);
- w=randmatrix(1,qtw, 1);
+ w=randmatrix(1,qtw);
 // w=mtxload("w2.dat",1,qtw);
  steps=0;
  lastE=0.0;

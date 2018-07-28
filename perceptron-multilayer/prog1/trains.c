@@ -4,7 +4,7 @@
 #include "../../modules/pmc.h"
 
 void main(){
- mtx samples, ds, output, sample, d;
+ mtx samples, ds, output, sample, d, copy;
  pmcnet net, oldnet1, oldnet2;
  char filename[100];
  int i, j, qtspl, qtdatabyrow, *qtneurons, qtw1, qtlayers, steps, *ftype;
@@ -23,9 +23,11 @@ void main(){
  qtdatabyrow=qtw1+qtneurons[1];
  qtdatabyrow=qtdatabyrow-1; //bias is not included in the file
  samples=mtxload("Table.dat", qtspl, qtdatabyrow);
- addcol(&samples, crystalmatrix(qtspl, 1, -1.0), 0); //including bias
+ copy=crystalmatrix(qtspl, 1, -1.0);
+ addcol(&samples, copy, 0); //including bias
+ mtxfree(&copy);
  qtdatabyrow=qtdatabyrow+1; //now it is
- srand(2);
+ srand(1);
  net=pmccreatenet(qtneurons, qtlayers, qtw1);
  ds=mtxcut(samples,0, qtspl, qtw1, qtdatabyrow-qtw1);
  samples=mtxcut(samples, 0, qtspl, 0, qtw1);
@@ -44,8 +46,12 @@ void main(){
  while(fabsl(Eqm-lastEqm)>precis){
   lastEqm=Eqm;
   for(i=0; i<samples.nrows; i++){
-   mtxcopy(&sample,mtxcut(samples, i, 1, 0, qtw1));
-   mtxcopy(&d,mtxcut(ds, i, 1, 0, ds.ncols));
+   copy=mtxcut(samples, i, 1, 0, qtw1);
+   mtxcopy(&sample,copy);
+   mtxfree(&copy);
+   copy=mtxcut(ds, i, 1, 0, ds.ncols);
+   mtxcopy(&d,copy);
+   mtxfree(&copy);
    adjustbymomentum(&net, &oldnet1, &oldnet2, momentum);
    adjust(sample, net, d, lrn, ftype);
   }

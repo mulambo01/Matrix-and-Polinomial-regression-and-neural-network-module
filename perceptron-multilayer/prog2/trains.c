@@ -3,8 +3,10 @@
 #include <math.h>
 #include "../../modules/pmc.h"
 
+#include <unistd.h> 
+
 void main(){
- mtx samples, ds, output, sample, d;
+ mtx samples, ds, output, sample, d, copy;
  pmcnet net, oldnet1, oldnet2;
  char filename[100];
  int i, j, qtspl, qtdatabyrow, *qtneurons, qtw1, qtlayers, steps, *ftype;
@@ -41,11 +43,16 @@ void main(){
  while(fabsl(Eqm-lastEqm)>precis){
   lastEqm=Eqm;
   for(i=0; i<samples.nrows; i++){
-   mtxcopy(&sample,mtxcut(samples, i, 1, 0, qtw1));
-   mtxcopy(&d,mtxcut(ds, i, 1, 0, ds.ncols));
+   copy=mtxcut(samples, i, 1, 0, qtw1);
+   mtxcopy(&sample,copy);
+   mtxfree(&copy);
+   copy=mtxcut(ds, i, 1, 0, ds.ncols);
+   mtxcopy(&d, copy);
+   mtxfree(&copy);
    adjustbymomentum(&net, &oldnet1, &oldnet2, momentum);
    adjust(sample, net, d, lrn, ftype);
   }
+ sleep(1);
   Eqm=meansqrerr(samples, net, ds, ftype);
   steps++;
  }

@@ -125,17 +125,23 @@ mtx layeransw(mtx input, int ftype){
 //qtlayers is the quantity of layers
 //ftype is the type of activation function
 mtx netthink(mtx x, pmcnet net, int *ftype){
- mtx y, input, x0;
+ mtx y, input, x0, copy;
  int qtlayers=net.qtlayers;
  x0=crystalmatrix(1,1,-1.0);
  input=mtxclone(x);
  y=nullmatrix(1,1);
  for(int i=0; i<qtlayers; i++){
-  mtxcopy(&input, layerthink(input, net.layer[i]));
-  mtxcopy(&y, layeransw(input, ftype[i]));
+  copy=layerthink(input, net.layer[i]);
+  mtxcopy(&input, copy);
+  mtxfree(&copy);
+  copy=layeransw(input, ftype[i]);
+  mtxcopy(&y, copy);
+  mtxfree(&copy);
   mtxcopy(&input, y);
   addcol(&input, x0, 0);
  }
+ mtxfree(&input);
+ mtxfree(&x0);
  return y;
 }
 
@@ -152,75 +158,95 @@ mtx netansw(mtx x, pmcnet net, int *ftype){
    answ.data[0][i]=0.0;
   }
  }
+ mtxfree(&y);
  return answ;
 }
 
 //it will adjust each weight of a network using the inputs and outputs
 void fitbydelta(mtx x, pmcnet net, mtx d, mtx *input, mtx *y, long double lrn, int *ftype){
- mtx *delta, change;
+ mtx delta, lastdelta, change, copy;
  int qtneurons, qtnfrwrd, qtlayers, i, j, layer;
  long double der, del;
  qtlayers=net.qtlayers;
- delta=(mtx *)malloc(qtlayers*sizeof(mtx));
 //last layer
  layer=net.qtlayers-1;
  qtneurons=input[layer].ncols;
  change=nullmatrix(1,1);
- delta[layer]=nullmatrix(1,qtneurons);
+ delta=nullmatrix(1,qtneurons);
  for(i=0; i<qtneurons; i++){
   der=func1(input[layer].data[0][i], ftype[layer]);
   del=(d.data[0][i]-y[layer].data[0][i])*der;
-  delta[layer].data[0][i]=del;
-  mtxcopy(&change,mtxmult(y[layer-1], del*lrn));
-  mtxcopy(&net.layer[layer].w[i],mtxsum(net.layer[layer].w[i],change));
+  delta.data[0][i]=del;
+  copy=mtxmult(y[layer-1], del*lrn);
+  mtxcopy(&change,copy);
+  mtxfree(&copy);
+  copy=mtxsum(net.layer[layer].w[i],change);
+  mtxcopy(&net.layer[layer].w[i],copy);
+  mtxfree(&copy);
  }
+ lastdelta=delta;
 //middle layers
  for(layer--;layer>0;layer--){
   qtnfrwrd=qtneurons;
   qtneurons=input[layer].ncols;
-  delta[layer]=nullmatrix(1,qtneurons);
+  delta=nullmatrix(1,qtneurons);
   for(i=0; i<qtneurons; i++){
    der=func1(input[layer].data[0][i], ftype[layer]);
    del=0.0;
    for(j=0; j<qtnfrwrd; j++){
-    del=del+delta[layer+1].data[0][j]*net.layer[layer+1].w[j].data[0][i];
+    del=del+lastdelta.data[0][j]*net.layer[layer+1].w[j].data[0][i];
    }
    del=-del*der;
-   delta[layer].data[0][i]=del;
-   mtxcopy(&change, mtxmult(y[layer-1], del*lrn));
-   mtxcopy(&net.layer[layer].w[i], mtxsum(net.layer[layer].w[i], change));
+   delta.data[0][i]=del;
+   copy=mtxmult(y[layer-1], del*lrn);
+   mtxcopy(&change, copy);
+   mtxfree(&copy);
+   copy=mtxsum(net.layer[layer].w[i], change);
+   mtxcopy(&net.layer[layer].w[i], copy);
+   mtxfree(&copy);
   }
+  mtxfree(&lastdelta);
+  lastdelta=delta;
  }
 //first layer
+ 
  qtnfrwrd=qtneurons;
  qtneurons=input[layer].ncols;
- delta[layer]=nullmatrix(1,qtneurons);
  for(i=0; i<qtneurons; i++){
   der=func1(input[layer].data[0][i], ftype[layer]);
   del=0.0;
   for(j=0; j<qtnfrwrd; j++){
-   del=del+delta[layer+1].data[0][j]*net.layer[layer+1].w[j].data[0][i];
+   del=del+lastdelta.data[0][j]*net.layer[layer+1].w[j].data[0][i];
   }
   del=-del*der;
-  delta[layer].data[0][i]=del;
-  mtxcopy(&change, mtxmult(x, del*lrn));
-  mtxcopy(&net.layer[layer].w[i], mtxsum(net.layer[layer].w[i],change));
+  copy=mtxmult(x, del*lrn);
+  mtxcopy(&change, copy);
+  mtxfree(&copy);
+  copy=mtxsum(net.layer[layer].w[i],change);
+  mtxcopy(&net.layer[layer].w[i], copy);
+  mtxfree(&copy);
  }
+ mtxfree(&change);
+ mtxfree(&delta);//delta and lastdelta are with the same address
 //end
 }
 
 //it will genearate the arrays input and y and pass them to the function fitbydelta
 void adjust(mtx x, pmcnet net, mtx d, long double lrn, int *ftype){
- mtx *y, *input, yy, ii, x0;
- int qtlayers=net.qtlayers;
+ mtx *y, *input, yy, ii, x0, copy;
+ int i, qtlayers=net.qtlayers;
  x0=crystalmatrix(1,1,-1.0);
  ii=mtxclone(x);
  yy=nullmatrix(1,1);
  y=(mtx *)malloc(qtlayers*sizeof(mtx));
  input=(mtx *)malloc(qtlayers*sizeof(mtx));
- for(int i=0; i<qtlayers; i++){
-  mtxcopy(&ii, layerthink(ii, net.layer[i]));
-  mtxcopy(&yy, layeransw(ii, ftype[i]));
+ for(i=0; i<qtlayers; i++){
+  copy=layerthink(ii, net.layer[i]);
+  mtxcopy(&ii, copy);
+  mtxfree(&copy);
+  copy=layeransw(ii, ftype[i]);
+  mtxcopy(&yy, copy);
+  mtxfree(&copy);
   input[i]=mtxclone(ii);
   if(i!=qtlayers-1){
    addcol(&yy, x0, 0);
@@ -229,25 +255,41 @@ void adjust(mtx x, pmcnet net, mtx d, long double lrn, int *ftype){
   mtxcopy(&ii, yy);
  }
  fitbydelta(x, net, d, input, y, lrn, ftype);
+ mtxfree(&yy);
+ mtxfree(&ii);
+ mtxfree(&x0);
+ for(i=0; i<qtlayers; i++){
+  mtxfree(&y[i]);
+  mtxfree(&input[i]);
+ }
+ free(y);
+ free(input);
 }
 
 void adjustbymomentum(pmcnet *net, pmcnet *oldnet1, pmcnet *oldnet2, long double momentum){
- mtx var;
+ mtx var, copy;
  long double **wchange;
  var=nullmatrix(1,1);
  int j, qtlayers;
  qtlayers=net->qtlayers;
  for(int i=0; i<qtlayers; i++){
   for(j=0; j<net->layer[i].qtneurons; j++){
-   mtxcopy(&var, mtxsub(oldnet1->layer[i].w[j], oldnet2->layer[i].w[j]));
-   mtxcopy(&var, mtxmult(var, momentum));
-   mtxcopy(&(net->layer[i].w[j]),mtxsum(net->layer[i].w[j], var));
+   copy=mtxsub(oldnet1->layer[i].w[j], oldnet2->layer[i].w[j]);
+   mtxcopy(&var, copy);
+   mtxfree(&copy);
+   copy=mtxmult(var, momentum);
+   mtxcopy(&var, copy);
+   mtxfree(&copy);
+   copy=mtxsum(net->layer[i].w[j], var);
+   mtxcopy(&(net->layer[i].w[j]),copy);
+   mtxfree(&copy);
    wchange=oldnet2->layer[i].w[j].data;
    oldnet2->layer[i].w[j].data=oldnet1->layer[i].w[j].data;
    oldnet1->layer[i].w[j].data=wchange;
    mtxcopy(&(oldnet1->layer[i].w[j]), net->layer[i].w[j]);
   }
  }
+ mtxfree(&var);
 }
 
 //calculate the mean square error of the samples
@@ -256,18 +298,28 @@ long double meansqrerr(mtx samples, pmcnet net, mtx d, int *ftype){
  int qtspl=samples.nrows;
  int qtinput=samples.ncols;
  int qtlayers;
- mtx u, x, output, error;
+ mtx u, x, output, error, copy;
  u=nullmatrix(d.nrows, d.ncols);
  x=nullmatrix(1, qtinput);
  output=nullmatrix(1, d.ncols);
  for(int i=0; i<qtspl; i++){
-  mtxcopy(&x,mtxcut(samples, i, 1, 0, qtinput));
-  mtxcopy(&output, netthink(x, net, ftype));
+  copy=mtxcut(samples, i, 1, 0, qtinput);
+  mtxcopy(&x,copy);
+  mtxfree(&copy);
+  copy=netthink(x, net, ftype);
+  mtxcopy(&output, copy);
+  mtxfree(&copy);
   putline(&u, output, i);
  }
- mtxcopy(&u, mtxmult(u, -1.0));
+ copy=mtxmult(u, -1.0);
+ mtxcopy(&u, copy);
+ mtxfree(&copy);
  error=mtxsum(u, d);
  result=vectprod(error, error)/qtspl;
+ mtxfree(&u);
+ mtxfree(&x);
+ mtxfree(&output);
+ mtxfree(&error);
 
  return result;
 }
@@ -282,6 +334,7 @@ void savelayer(char *filename, pmclayer layer){
   putline(&wbylayer, layer.w[i], i);
  }
  mtxsave(filename, wbylayer);
+ mtxfree(&wbylayer);
 }
 
 //save a network in a text file
@@ -313,6 +366,7 @@ pmclayer loadlayer(char *filename, int qtneurons, int qtw){
  }
  layer.w=w;
  layer.qtneurons=qtneurons;
+ mtxfree(&fileload);
  return layer;
 }
 
