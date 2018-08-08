@@ -415,3 +415,19 @@ pmcnet clonenet(pmcnet net){
  clone.layer=layer;
  return clone;
 }
+
+void pmclayerfree(pmclayer *layer){
+ int qtneurons=layer->qtneurons;
+ for(int i=0; i<qtneurons; i++){
+  mtxfree(&(layer->w[i]));
+ }
+ free(layer->w);
+}
+
+void pmclayercopy(pmclayer *layer, pmclayer copy){
+ int qtneurons=copy.qtneurons;
+ layer->qtneurons=qtneurons;
+ for(int i=0; i<qtneurons; i++){
+  mtxcopy(&(layer->w[i]), copy.w[i]);
+ }
+}

@@ -38,4 +38,5 @@ pmclayer loadlayer(char *filename, int qtneurons, int qtw);
 pmcnet loadnet(char *dirname, char *fileprefix, int *qtneurons, int qtlayers, int qtw1);
 pmclayer clonelayer(pmclayer layer);
 pmcnet clonenet(pmcnet net);
-
+void pmclayerfree(pmclayer *layer);
+void pmclayercopy(pmclayer *layer, pmclayer copy);
