@@ -5,19 +5,13 @@
 void main(){
  mtx input, y;
  pmcnet net;
- int *qtneurons, qtlayers, qtw1, *ftype;
+ int qtw1, *ftype;
 //quantity of input including the bias
- qtw1=4;
- qtlayers=2;
- ftype=(int *)malloc(qtlayers*sizeof(int));
- qtneurons=(int *)malloc(qtlayers*sizeof(int));
- qtneurons[0]=10;
- qtneurons[1]=1;
 //load a network
 //the quantity of inputs dont include the bias
- net=loadnet("layers", "layer", qtneurons, qtlayers, qtw1);
- ftype[0]=SIGM;
- ftype[1]=LINEAR;
+ net=pmcloadnet("layers");
+ qtw1=net.layer[0].w[0].ncols;
+ ftype=net.ftype;
 
  input=nullmatrix(1,qtw1);
  input.data[0][0]=-1.0;
@@ -25,6 +19,6 @@ void main(){
   scanf("%Lf", &input.data[0][i]);
  }
 
- y=netthink(input, net, ftype);
+ y=netthink(input, net);
  draw(y);
 }
