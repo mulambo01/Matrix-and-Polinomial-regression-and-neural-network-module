@@ -2,6 +2,14 @@
 #include <stdlib.h>
 #include <math.h>
 #include "pmc.h"
+#include <string.h>
+
+typedef struct
+{
+ long double *o2;
+ pmclayer layer1;
+ pmcnet taillayers;
+}rbfnet;
 
 pmclayer starthiddenlayer(mtx samples, int qtneurons){
  pmclayer layer;
@@ -111,7 +119,21 @@ long double* createhiddenlayer(pmclayer *layer, mtx samples, int qtneurons){
  return o2;
 }
 
-long double rbfneuronthink(mtx x, mtx w, long double o2){
+rbfnet rbfcreatenet(mtx samples, int qtneurons1, int *qtneuronstail, int qtlayerstail){
+ long double *o2;
+ int qtw2=qtneurons1+1;
+ pmclayer layer1;
+ pmcnet taillayers;
+ rbfnet net;
+ o2=createhiddenlayer(&layer1, samples, qtneurons1);
+ taillayers=pmccreatenet(qtneuronstail, qtlayerstail, qtw2);
+ net.layer1=layer1;
+ net.taillayers=taillayers;
+ net.o2=o2;
+ return net;
+}
+
+long double rbfneuronl1think(mtx x, mtx w, long double o2){
  long double answ=0.0;
  for(int i=0; i<w.ncols; i++){
   answ=answ+powl((x.data[0][i]-w.data[0][i]),2);
@@ -121,32 +143,32 @@ long double rbfneuronthink(mtx x, mtx w, long double o2){
  return answ;
 }
 
-mtx rbflayerthink(mtx x, pmclayer layer, long double *o2){
+mtx rbfl1think(mtx x, rbfnet net){
  mtx answ;
+ pmclayer layer=net.layer1;
  int qtneurons=layer.qtneurons;
  long double **w=(long double **)malloc(sizeof(long double *));
  answ.nrows=1;
  answ.ncols=qtneurons;
  w[0]=(long double *)malloc(qtneurons*sizeof(long double));
  for(int i=0; i<qtneurons; i++){
-  w[0][i]=rbfneuronthink(x, layer.w[i], o2[i]);
+  w[0][i]=rbfneuronl1think(x, layer.w[i], net.o2[i]);
  }
  answ.data=w;
  return answ;
 }
 
-
-void updatesamples(mtx *samples, pmclayer layer, long double *o2){
+void rbfsmplsprocess(mtx *samples, rbfnet net){
 
  mtx sample, newsamples, copy;
  int nrows, qtneurons;
  nrows=samples->nrows;
- qtneurons=layer.qtneurons;
+ qtneurons=net.layer1.qtneurons;
  newsamples=nullmatrix(nrows, qtneurons);
 
  for(int i=0; i<nrows; i++){
   sample=mtxcut(*samples, i, 1, 0, samples->ncols);
-  copy=rbflayerthink(sample, layer, o2);
+  copy=rbfl1think(sample, net);
   putline(&newsamples, copy, i);
   mtxfree(&sample);
   mtxfree(&copy);
@@ -155,27 +177,41 @@ void updatesamples(mtx *samples, pmclayer layer, long double *o2){
  mtxfree(&newsamples);
 }
 
-void main(){
- pmclayer layer1;
- mtx samples, sample, ds, copy;
- int qtneurons1, qtsamples, qtw1, qtneurons2, qtdatabyrow;
- long double *o2;
- qtneurons1=2;
- qtsamples=150;
- qtw1=3;
- qtneurons2=1;
- qtdatabyrow=qtw1+qtneurons2;
- samples=mtxload("Table.dat", qtsamples, qtdatabyrow);
- ds=mtxcut(samples, 0, qtsamples, qtw1, qtneurons2);
- copy=mtxcut(samples, 0, qtsamples, 0, qtw1);
- mtxcopy(&samples, copy);
+mtx rbfthink(mtx x, rbfnet net, int *ftype){
+ mtx answ, copy;
+ copy=rbfl1think(x, net);
+ answ=netthink(copy, net.taillayers, ftype);
  mtxfree(&copy);
-while(1){
- o2=createhiddenlayer(&layer1, samples, qtneurons1);
-pmclayerfree(&layer1);
-//draw(samples);
-//updatesamples(&samples, layer1, o2);
-//draw(samples);
- free(o2);
+ return answ;
 }
+
+void rbfsavenet(char *dirname, rbfnet net){
+ long double **data=(long double **)malloc(sizeof(long double *));
+ int sizename=strlen(dirname)+15;
+ char filename[sizename];
+ data[0]=net.o2;
+ mtx o2;
+ o2.ncols=net.layer1.qtneurons;
+ o2.nrows=1;
+ o2.data=data;
+ savenet(dirname, "layer", net.taillayers);
+ sprintf(filename, "%s/rbflayer.dat", dirname);
+ savelayer(filename, net.layer1);
+ sprintf(filename, "%s/o2.dat", dirname);
+ mtxsave(filename, o2);
+ free(data);
+}
+///modificar salvamento de rede com arquivo contendo quantidades
+rbfnet rbfloadnet(char *dirname, int qtrbfneurons, int qttaillayers){
+ rbfnet net;
+ mtx o2;
+ pmcnet taillayers;
+ pmclayer layer1;
+ int sizename=strlen(dirname)+15, qtw;
+ char filename[sizename];
+ sprintf(filename, "%s/o2.dat", dirname);
+ o2=mtxload(filename, 1, qtrbfneurons);
+ net.o2=o2[0];
+ sprintf(filename, "%s/rbflayer.dat", dirname);
+ layer1=loadlayer(filename, qtrbfneurons, )
 }
