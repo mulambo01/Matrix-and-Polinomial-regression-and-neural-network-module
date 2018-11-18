@@ -1,1 +1,1 @@
-# Linear-System-Module
+# Modules for neural networks and polynomial regressions
